@@ -1,0 +1,341 @@
+\documentclass[11pt]{article}
+\usepackage{hyperref}
+\usepackage{enumitem,fullpage,amsmath,amsthm,multirow,array,graphicx}
+\usepackage{amsfonts}
+\usepackage{comment}
+\usepackage[procnames]{listings}
+\usepackage{color} % used for including code
+\definecolor{keywords}{RGB}{255,0,90}
+\definecolor{comments}{RGB}{0,0,113}
+\definecolor{red}{RGB}{160,0,0}
+\definecolor{green}{RGB}{0,150,0}
+ 
+\lstset{language=Python, 
+        basicstyle=\ttfamily\small, 
+        keywordstyle=\color{keywords},
+        commentstyle=\color{comments},
+        stringstyle=\color{red},
+        showstringspaces=false,
+        identifierstyle=\color{green},
+        procnamekeys={def,class}}
+
+% Used for table
+\usepackage{booktabs}
+
+% used to put figures side by side
+\usepackage{subfigure}
+
+\newcommand{\points}[1]{\textbf{[#1 Points]}}
+\newcommand{\extracredit}{\mbox{\textbf{[Extra Credit]}}}
+
+\newcommand{\Pm}[1]{\mathbb{P}\left[#1 \right]}
+\title{CS186 Balanced Bidding}
+\author{Luis Perez \& Tiffany Wu}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section*{Balanced Bidding Agent}
+\begin{enumerate}
+\item We use the truthful bidding agent as an example. The  implementation of the expected utility function is below:
+
+  % expected utility code depends on pset5_code/nautilusbb.py
+  \lstinputlisting[language=Python, firstline=43, lastline=69]{pset5_code/nautilusbb.py}
+
+  followed by the implementation of the bid function:
+
+  % bid code depends on pset5_code/nautilusbb.py
+  \lstinputlisting[language=Python, firstline=84, lastline=114]{pset5_code/nautilusbb.py}
+\item 
+  \begin{enumerate}
+  \item  We make use if the commands to generate Table \ref{tab:bb_tt}.
+  \begin{lstlisting}
+  ./auction --perms 10 --iters 200 --seed 39 Truthful,5
+  ./auction --perms 10 --iters 200 --seed 39 Nautilusbb,5
+  \end{lstlisting}
+  Table \ref{tab:bb_tt} summarizes our results for the utilities of the agents after 200 iterations with 10 permutations per iteration.
+    
+    \begin{table}[!h]
+      \centering
+        \begin{tabular}{clllllll}
+        \hline
+        (T, BB) & Agent 0 & Agent 1 & Agent 2 & Agent 3 & Agent 4 & Average & Std. Dev     \\ \hline
+        (5,0)   & 354.91 & 389.92 & 337.78, & 302.44 & 340.21 & 341.24 & 31.63 \\
+        (0,5)   & 672.17   & 783.62  & 678.75  & 646.13  & 705.69 & 697.27 & 52.71 \\ \hline
+        \end{tabular}
+        \caption{Table summarizing average daily utilities of agents playing in homogeneous populations. Game play took place over 48 rounds, or two days.}
+        \label{tab:bb_tt}
+      \end{table}
+
+    As we can tell, the average utility of a population of truthful agents is $\$341.24$ which is much lower than the average utility of the balanced bidder populations ($\$697.27$). The standard deviations indicate that this is of statistical significance as the two values lie at least $6\sigma$ away from each other (with respect to either $\sigma$).
+
+    The explanation for the above result is intuitive. Truthful agents are bidding their respective values, without regard for the previous history. We already know that GSP is not a truthful auction, and therefore the optimal strategy for an agent is certainly not truthful bidding. Therefore, the population of truthful agents does not maximize their utility. 
+
+    On the other hand, the population of balanced bidders perform a type of targeted bidding, using the history to select a bid which optimizes the expected utility. Therefore, from a general point of view, a strategy which explicit seeks to optimize utility should do so.
+
+    More precisely, we have three conditions we consider in the balanced bidding scenario, depending on the position $k^*$ we select to target and the price, $p_{k*}$, we expect to pay for that position assuming bids for this round are equivalent to last round bids. 
+
+    \begin{itemize}
+      \item Case where $p_{k^*} \geq w_i$. Here, we bid our value. 
+      \item Otherwise, case where $k* = 1$. Here, we're going for the top position, and again, we bid our value.
+      \item Otherwise, case where $k* > 1$. Here, we're going for some intermediate position. We therefore bid enough to become indifferent between positions $k^*$ and $k*-1$ as dictated by the lanced bidding strategy. However, note that:
+      \begin{align*}
+        b_i = w_i - \frac{q_{k^*}}{q_{k^{*}-1}}(w_i - p_{k^*}) \leq w_i
+      \end{align*}
+      Therefore, our bid is at most our value, but will be {\it strictly} less when $w_{i} - p_{k*} \neq 0$ and $q_{k*} \neq 0$.
+    \end{itemize}
+    Therefore, in a population of balanced bidding agents, we would expect the overall utility to be far greater. A truthful bid occurs sometimes, but other times a bid strictly less that the truthful is based, but is balanced so that it will lead to no harm to us given the same bids from the last rounds. This leads to an overall increase in utility for each agent, as they all continue to play the same strategy, targeting similar slots.
+
+    Another interesting things to note is Table \ref{tab:bb_tt_spend}. We see that the average daily expenditure of a truthful population is far higher than the average daily expenditure of an balanced bidder population. The explanation for this effect is quite similar to the above. In a balanced bidding situation, bidders will sometimes bid lower than their values, and if every bidders does so, it allows all of them to obtain the same items for a lower price, thereby leading to the same expenditure. 
+    \begin{table}[h]
+      \centering
+      \begin{tabular}{clllllll}
+      \hline
+      (T, BB) & Agent 0           & Agent 1           & Agent 2           & Agent 3           & Agent 4          & Average          & Std. Dev     \\ \hline
+      (5,0)   & 1200.17 & 1373.05 & 1232.28 & 1228.18 & 282.47 & 1228.8   & 68.18   \\
+      (0,5)   & 880.07   &  978.77  &  889.03  &  881.83  &  917.38 &  909.42 & 41.57 \\ \hline
+      \end{tabular}
+      \caption{Table summarizing average daily expenditure of agents playing in homogeneous populations. Game play took place over 48 rounds, or two days.}
+      \label{tab:bb_tt_spend}
+      \end{table}
+    \item  We make use if the commands to generate Table \ref{tab:mixed}.
+  \begin{lstlisting}
+  ./auction --perms 10 --iters 200 --seed 39 Truthful,4 Nautilusbb,1
+  ./auction --perms 10 --iters 200 --seed 39 Truthful,1, Nautilusbb,4
+  \end{lstlisting}
+  Table \ref{tab:mixed} summarizes our results for the utilities of the agents after 200 iterations with 10 permutations per iteration.
+  \begin{table}[h]
+    \centering
+    \begin{tabular}{clllll}
+    \hline
+    (T, BB) & Agent 0 & Agent 1 & Agent 2 & Agent 3 & Agent 4*         \\ \hline
+    (4,1)   & 395.58  & 419.57  & 388.43  & 390.42  & 580.58           \\
+    (1,4)   &  691.99  & 664.17 & 667.76 & 684.86 & 678.44 \\ \hline
+    \end{tabular}
+    \caption{Summary of average daily utilities for mixed populations with a single deviating agent, specified by an *.}
+    \label{tab:mixed}
+  \end{table}
+  Looking at row 1 in Table \ref{tab:mixed}, we see that a deviation from truthful to balanced bidding is beneficial. because it increase Agent 4's expected utility. Interestingly enough, it also appears to have a slight positive effect the utility of the other agents. The idea behind this would be that by bidding a lower amount but targeting the right stops, Agent 4 actually allows truthful agents to pay less and slightly increases their utilities.
+
+  Looking at row 2 in Table \ref{tab:mixed}, we see that a deviation from a balanced bidding strategy is not useful, in the sense that it appears to do no better than an balanced bidding strategy. This is slightly surprising, as we originally expected the deviation to be {\it harmful}. However, the payouts of the agents are well determined by just four agents, considering only four spots are being auction. Due to the fact that four agents are all using the balanced bidding strategy, it's reasonable to expect no difference in utility if one agent switches to truthful bidding. However, as more agents switch, we'd expect something closer to row 1. In general, the important fact is that the deviation is no better than balanced bidding. 
+
+  Put together, the above suggest an incentive exists to switch from truthful to balanced bidding, while no incentive exists to do the reverse. 
+
+  However, our intuition that deviating from a balanced budget equilibrium to a truthful strategy should ``hurt'' the agent is not completely misplaced. As we can see from Table \ref{tab:mixed_spend}, row 2, while the truthful agent might maintain his utility, it comes at quite a hefty cost. In a scenario where daily budgets are important, this would not be beneficial to the agent. 
+  \begin{table}[h]
+    \centering
+    \begin{tabular}{clllll}
+    \hline
+    (T, BB) & Agent 0 & Agent 1 & Agent 2 & Agent 3 & Agent 4*         \\ \hline
+    (4,1)   & 1300.12  & 1252.75  & 1271.92  & 1253.00 &  554.95          \\
+    (1,4)   & 776.88 & 752.54 & 760.37 & 754.82 & 1347.72 \\ \hline
+    \end{tabular}
+    \caption{Summary of average daily expenditure for mixed populations with a single deviating agent, specified by an *.}
+    \label{tab:mixed_spend}
+  \end{table}
+  \end{enumerate}
+\end{enumerate}
+
+\section*{Experiments with Revenue: GSP vs VCG Auctions}
+\begin{enumerate}[resume]
+\item 
+  \begin{enumerate}
+  \item The code for the VCG payment rule, using the recursive formulation, is found below. 
+  % vcg code depends on pset5_code/vcg.py
+  \lstinputlisting[language=Python, firstline=47, lastline=47]{pset5_code/vcg.py}
+  \lstinputlisting[language=Python, firstline=51, lastline=66]{pset5_code/vcg.py}
+  \item 
+  The average daily revenue under GSP with no reserve price when all agents use the balanced bidding strategy can be obtained using the command:
+  \begin{lstlisting}
+  ./auction --perms 1 --iters 200 --seed 39  Nautilusbb,5
+  \end{lstlisting}
+  as is, on average, $\$4522.05$ with a standard deviation of $\$1253.24$ (relatively high...).
+
+  For what occurs as the reserve prize increases, intuitively we'd expect the average daily revenue to increase -- we only accept bids which provide us with average daily revenue -- until a certain point, at which the average daily revenue would begin to decrease (taking it to the extreme, imagine setting a $r > w_{\text{max}}$).
+
+  We wrote a short program to repeat the auction with different reserve values. The code can be found in {\it reserve\_graph.py}. We used the following command to generate the Figure \ref{fig:gps_plot}.
+
+  \begin{lstlisting}
+  ./reserve_graph --perms 1 --iters 200 --seed 39 --max_reserve 175 
+  --reserve_gap 1 --figure_title "..." --figure_file "..." Nautilusbb,5
+  \end{lstlisting}
+  As can be seen from the figure, our intuition is entirely correct. The reserve price leads to a rise in average daily revenue, until about $\$0.9$, at which point it begins to decrease the average daily revenue.
+
+  \begin{figure}[!h]
+  \centering
+    \includegraphics[scale=0.4]{pset5_code/gsp_reserve_plot}
+    \caption{Plot of the revenue with change in reserve price for a generalized second prize auction with agents who use a balanced bidding strategy.}
+    \label{fig:gps_plot}
+  \end{figure}
+
+  From the text, we know that the revenue-optimal reserve price in a GSP with balanced bidding is given by $\phi^{-1}(0)$, where we define:
+  \begin{align*}
+    \phi(w_i) &= w_i - \frac{1-F(w_i)}{f(w_i)}
+  \end{align*}
+  with $F$ the cumulative distribution function and $f$ the density function of the values, $w_i$. In our case, we know that $W_i \sim U(a,b)$. We therefore have:
+  \begin{align*}
+    F(x) &= \left\{
+     \begin{array}{lr}
+       \frac{1}{b-a}(x - a) & : x \in [a, b] \\
+       0 & : \text{ otherwise }
+     \end{array}
+   \right.\\
+   f(x) &= \frac{1}{b-a}  
+  \end{align*}
+  Plugging into the above an solving, we have:
+  \begin{align*}
+  \phi(w_i) &= w_i - \frac{1 - \frac{1}{b-a}(w_i - a)}{\frac{1}{b-a}} \\
+  &= 2w_i - (b-a) - a \\
+  &= 2w_i -b 
+  \end{align*}
+  Given that for our auction we have $b = \$1.75$, and setting the above equal to zero, we obtain our optimal reserve prize:
+  \begin{align*}
+  r = \phi^{-1}(0) = \frac{\$1.75}{2} = \$0.875
+  \end{align*}
+  This is verified by the findings summarized in Figure \ref{fig:gps_plot}.
+
+  \item The average daily revenue under VCG with no reserve price when all agents bid truthfully can be obtained using the command:
+  \begin{lstlisting}
+  ./auction --perms 1 --iters 200 --mech="vcg" --seed 39  Truthful,5
+  \end{lstlisting}
+  and is, on average, $\$4333.55$ with a standard deviation of $\$1124.06$ (relatively high...).
+
+  We expect something similar to GSP as the bids increase. For verification, we can see Figure \ref{fig:vcg_reserve}.
+
+  \begin{figure}[!h]
+    \centering
+    \includegraphics[scale=0.5]{pset5_code/vcg_reserve_plot}
+    \caption{Plot of VCG Auction revenue with 5 truthful bidders with respect to reserve price.}
+    \label{fig:vcg_reserve}
+  \end{figure}
+
+  From the figure, we can tell that a similar revenue-optimizing reserve price is also achievable. It's interesting to note how quickly the revenue drops off if the reserve price surpasses the optimal. This might lead auctioneers to under-estimate the reserve price, in an attempt to prevent steep revenue decreases.
+
+  Comparing the two models, we first note that the average daily revenue is about the same, with VCG lower. 
+
+  However, for the above, it appears that truthful bidding in VCG and balanced bidding in GSP are equally apt at maximizing average daily revenue for the auctioneer, within a few percentage points of each other. Given the variance, not much else can be said.
+
+  As to the effects of reserve price, from both Figure \ref{fig:gps_plot} and \ref{fig:vcg_reserve}, we can tell that the reserve increases revenue slightly as it increases, then rapidly becomes a negative effect. 
+
+  The only qualitative difference between the two figures is the volatility of Figure \ref{fig:gps_plot}. However, this is likely an artifact of the bidding strategy or the seed, rather than the changes in the reserve price or GSP itself.
+
+  \item The revenue decreases, as expected, because for the same bids, GSP generates more revenue than VCG. It is now \$4068.70, which is lower by about $10\%$.  The balanced bidding strategy is not revenue-optimizing in the VCG mechanism. We can see this more clearly from the Figure \ref{fig:switch}, which was generated using the command:
+   \begin{lstlisting}
+  ./reserve_graph --perms 1 --iters 200 --seed 39 
+  --mech="switch" --figure_title "..." --figure_file "..." 
+  Nautilusbb,5
+  \end{lstlisting}
+
+  \begin{figure}[!h]
+    \centering
+    \includegraphics[scale=0.5]{pset5_code/switch_revenue}
+    \caption{Revenue for auctioneering when switching from GSP to VCG at round 24.}
+    \label{fig:switch}
+  \end{figure}
+  Note that the switch occurs at time period 24. Ignoring the effects on the revenue by the increased number of clicks, it's immediately obvious that VCG leads to a decrease in revenue (the graph would be symmetric if this were not the case, given that the budget constraint hasn't come into play). We can verify this by running an experiment with VCG and the balanced bidding strategy. We do this with the commands:
+   \begin{lstlisting}
+    ./auction --perms 1 --iters 200 --seed 39 
+    --mech="vcg" Nautilusbb,5
+    \end{lstlisting}
+
+  and note that the average daily revenue is $\$3583.62$ (significantly lower). This is because balanced bidding is not optimal under the VCG mechanism.
+  
+  Bidders must adjust to the new system, which takes a period of time, hence the slow recovery rate.
+  \item On the agent's side, we see that if truthful bidding isn't always a DSE in all mechanisms, and it can be useful to deviate to a strategy that bids less than your true value (though these strategies may be harder to implement). In terms of mechanism design, it's a balance between short-term revenue and simplicity for the agents interfacing with the system. In short, different agents are best responses in different mechanisms, so it's important to tailor an agent's strategy to the mechanism.
+  \end{enumerate}
+\end{enumerate}
+
+\section*{The Competition}
+\begin{enumerate}[resume]
+\item
+  \begin{enumerate}
+  \item Following what we learn from above, we design an agent which is tailored to the mechanism in the auction. First, we collect some data, which is summarized in Figure \ref{fig:budget_low}, \ref{fig:budget_high}, \ref{fig:budget_tt}, \ref{fig:budget_bb}. Respectively, we call these agents LowBidder, HighBidder, BalancedBidder, and Truthful. We already know the dynamics of BalancedBidder and Truthful.
+
+  \subsection*{Data Collection}
+
+  As for HighBidder, the idea is that we perform a balanced bidder approach, but with some small modifications. For all $t \leq 42$, we bid only half the value we normally would. The idea here is to save money in early rounds so that we can then spend it at later rounds. For all later rounds, we bid normally.
+
+  For LowBidder, the idea is that we don't want to bid when the click through rate is low. We implement this by noting that in rounds where $15 \leq t \leq 33$, the bidder bids $0$. On all other rounds, the bids are the same as the balanced bidder.
+
+  From the graphs below, we can tell that all of these approaches do better than a naive approach under budget constraints. However, as these are the two suggested approaches, and also some of the easiest to implement, we decided to try a more sophisticated mechanism.
+
+  \begin{figure*}[!h]
+    \centering
+      \begin{subfigure}{}
+        \centering
+        \includegraphics[scale=0.2]{pset5_code/budget_tt_utility}
+      \end{subfigure}
+      ~
+      \begin{subfigure}{}
+        \centering
+        \includegraphics[scale=0.2]{pset5_code/budget_tt_revenue}
+      \end{subfigure}
+      \caption{Left: Utility for a population of truthful bidders with \$600 budget constraint. Right: revenue.}
+      \label{fig:budget_tt}
+  \end{figure*}
+
+  \begin{figure*}[!h]
+    \centering
+      \begin{subfigure}{}
+        \centering
+       \includegraphics[scale=0.2]{pset5_code/budget_bb_utility}
+      \end{subfigure}
+      ~
+      \begin{subfigure}{}
+        \centering
+        \includegraphics[scale=0.2]{pset5_code/budget_bb_revenue}
+      \end{subfigure}
+      \caption{Left: Utility of Balanced bidding agents under a daily budget constraint of \$600 over a single day. Right: Revenue.}
+      \label{fig:budget_bb}
+  \end{figure*}
+
+  \begin{figure*}[!h]
+    \centering
+      \begin{subfigure}{}
+        \centering
+       \includegraphics[scale=0.2]{pset5_code/budget_high_utility}
+      \end{subfigure}
+      ~
+      \begin{subfigure}{}
+        \centering
+        \includegraphics[scale=0.2]{pset5_code/budget_high_revenue}
+      \end{subfigure}
+      \caption{Left: Utility of High bidder agents under a daily budget constraint of \$600 over a single day. Right: Revenue.}
+      \label{fig:budget_high}
+  \end{figure*}
+
+  \begin{figure*}[!h]
+    \centering
+      \begin{subfigure}{}
+        \centering
+       \includegraphics[scale=0.2]{pset5_code/budget_low_utility}
+      \end{subfigure}
+      ~
+      \begin{subfigure}{}
+        \centering
+        \includegraphics[scale=0.2]{pset5_code/budget_low_revenue}
+      \end{subfigure}
+      \caption{Left: Utility of Low bidder agents under a daily budget constraint of \$600 over a single day. Right: Revenue.}
+      \label{fig:budget_low}
+  \end{figure*}
+
+
+  \subsection*{Final Mechanism}
+  \pagebreak
+  First, our mechanism changes the initial bid. We expect most people to leave their initial bid as:
+
+  \begin{lstlisting}
+  return self.value / 2
+  \end{lstlisting}
+  Here's we're taking advantage of the code that was initially distributed. It's a safe assumption to.
+  Therefore, we design an agent which attempts to maximize his utility in the first round, given that everyone will be paying.
+
+  Using this information, our agent, $k$, assumes the truthful value of the other agents is
+  %\begin{align*}
+  %  w_i &= b_i^{(0)} \tag{i \neq k}
+  %\end{align*}
+  
+  \end{enumerate}
+\end{enumerate}
+\end{document}
