@@ -10,7 +10,7 @@ gevent-websocket==0.9.3
 greenlet==0.4.5
 ipython==2.4.1
 itsdangerous==0.24
-Jinja2==2.7.3
+Jinja2==2.10.1
 Markdown==2.5.2
 MarkupSafe==0.23
 matplotlib==1.4.2
